@@ -23,9 +23,5 @@
       "src": "/",
       "dest": "/public/index.html"
     }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/server.js" },
-    { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
