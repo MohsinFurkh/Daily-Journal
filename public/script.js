@@ -555,41 +555,299 @@ function updateGoalProgress(type, progressBar, completedEl, totalEl) {
     }
 }
 
-// Load goals from localStorage
-function loadGoals() {
-    const savedGoals = localStorage.getItem('journal_goals');
-    if (savedGoals) {
-        try {
-            goals = JSON.parse(savedGoals);
-        } catch (error) {
-            console.error('Error parsing saved goals:', error);
-            goals = { weekly: {}, monthly: {} };
+// Load goals from the server
+async function loadGoals() {
+    try {
+        const response = await fetch('/api/goals');
+        if (!response.ok) {
+            throw new Error('Failed to load goals');
         }
-    } else {
-        goals = { weekly: {}, monthly: {} };
+        const goals = await response.json();
+        return goals || {};
+    } catch (error) {
+        console.error('Error loading goals:', error);
+        return {};
     }
-    
-    // Initialize current period if it doesn't exist
-    if (!goals.weekly[currentWeekKey]) {
-        goals.weekly[currentWeekKey] = [];
-    }
-    
-    if (!goals.monthly[currentMonthKey]) {
-        goals.monthly[currentMonthKey] = [];
-    }
-    
-    renderGoals();
 }
 
-// Save goals to localStorage
-async function saveGoals() {
+// Save goals to the server
+async function saveGoals(goals) {
     try {
-        localStorage.setItem('journal_goals', JSON.stringify(goals));
+        const response = await fetch('/api/goals', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(goals)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to save goals');
+        }
+        return true;
     } catch (error) {
         console.error('Error saving goals:', error);
-        throw error;
+        return false;
     }
 }
+
+// Update the renderGoals function to be async
+async function renderGoals() {
+    const goals = await loadGoals();
+    renderGoalList('weekly', weeklyGoalsList);
+    renderGoalList('monthly', monthlyGoalsList);
+    updateGoalsProgress();
+}
+
+// Update the saveGoal function to be async
+async function saveGoal() {
+    const goalTitle = document.getElementById('goal-title').value.trim();
+    const goalDescription = document.getElementById('goal-description').value.trim();
+    const goalType = document.getElementById('goal-type').value;
+    const goalId = document.getElementById('goal-id').value || Date.now().toString();
+    
+    if (!goalTitle) {
+        alert('Please enter a goal title');
+        return;
+    }
+
+    const goals = await loadGoals();
+    const currentDate = new Date();
+    const weekKey = `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`;
+    const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    const goal = {
+        id: goalId,
+        title: goalTitle,
+        description: goalDescription,
+        completed: false,
+        createdAt: new Date().toISOString()
+    };
+
+    if (goalType === 'weekly') {
+        if (!goals.weekly) goals.weekly = {};
+        if (!goals.weekly[weekKey]) goals.weekly[weekKey] = [];
+        
+        const existingIndex = goals.weekly[weekKey].findIndex(g => g.id === goalId);
+        if (existingIndex >= 0) {
+            goals.weekly[weekKey][existingIndex] = goal;
+        } else {
+            goals.weekly[weekKey].push(goal);
+        }
+    } else {
+        if (!goals.monthly) goals.monthly = {};
+        if (!goals.monthly[monthKey]) goals.monthly[monthKey] = [];
+        
+        const existingIndex = goals.monthly[monthKey].findIndex(g => g.id === goalId);
+        if (existingIndex >= 0) {
+            goals.monthly[monthKey][existingIndex] = goal;
+        } else {
+            goals.monthly[monthKey].push(goal);
+        }
+    }
+
+    const saved = await saveGoals(goals);
+    if (saved) {
+        closeGoalModal();
+        await renderGoals();
+    } else {
+        alert('Failed to save goal. Please try again.');
+    }
+}
+
+// Update the toggleGoalCompletion function to be async
+async function toggleGoalCompletion(goalId) {
+    const goals = await loadGoals();
+    const currentDate = new Date();
+    const weekKey = `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`;
+    const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    let found = false;
+
+    // Check weekly goals
+    if (goals.weekly && goals.weekly[weekKey]) {
+        const goalIndex = goals.weekly[weekKey].findIndex(g => g.id === goalId);
+        if (goalIndex >= 0) {
+            goals.weekly[weekKey][goalIndex].completed = !goals.weekly[weekKey][goalIndex].completed;
+            goals.weekly[weekKey][goalIndex].completedAt = goals.weekly[weekKey][goalIndex].completed ? 
+                new Date().toISOString() : undefined;
+            found = true;
+        }
+    }
+
+    // Check monthly goals if not found in weekly
+    if (!found && goals.monthly && goals.monthly[monthKey]) {
+        const goalIndex = goals.monthly[monthKey].findIndex(g => g.id === goalId);
+        if (goalIndex >= 0) {
+            goals.monthly[monthKey][goalIndex].completed = !goals.monthly[monthKey][goalIndex].completed;
+            goals.monthly[monthKey][goalIndex].completedAt = goals.monthly[monthKey][goalIndex].completed ? 
+                new Date().toISOString() : undefined;
+            found = true;
+        }
+    }
+
+    if (found) {
+        const saved = await saveGoals(goals);
+        if (saved) {
+            await renderGoals();
+        } else {
+            alert('Failed to update goal status. Please try again.');
+        }
+    }
+}
+
+// Update the deleteGoal function to be async
+async function deleteGoal(goalId) {
+    if (!confirm('Are you sure you want to delete this goal? This action cannot be undone.')) {
+        return;
+    }
+
+    const goals = await loadGoals();
+    const currentDate = new Date();
+    const weekKey = `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`;
+    const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    let found = false;
+
+    // Check weekly goals
+    if (goals.weekly && goals.weekly[weekKey]) {
+        const goalIndex = goals.weekly[weekKey].findIndex(g => g.id === goalId);
+        if (goalIndex >= 0) {
+            goals.weekly[weekKey].splice(goalIndex, 1);
+            found = true;
+        }
+    }
+
+    // Check monthly goals if not found in weekly
+    if (!found && goals.monthly && goals.monthly[monthKey]) {
+        const goalIndex = goals.monthly[monthKey].findIndex(g => g.id === goalId);
+        if (goalIndex >= 0) {
+            goals.monthly[monthKey].splice(goalIndex, 1);
+            found = true;
+        }
+    }
+
+    if (found) {
+        const saved = await saveGoals(goals);
+        if (saved) {
+            await renderGoals();
+        } else {
+            alert('Failed to delete goal. Please try again.');
+        }
+    }
+}
+
+// Update the renderGoalList function to be async
+async function renderGoalList(type, container) {
+    const goals = await loadGoals();
+    const currentDate = new Date();
+    const key = type === 'weekly' 
+        ? `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`
+        : `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    const typeGoals = (goals[type] && goals[type][key]) || [];
+    
+    if (typeGoals.length === 0) {
+        container.innerHTML = '<div class="no-goals">No goals set for this ' + type + '</div>';
+        return;
+    }
+
+    container.innerHTML = typeGoals.map(goal => `
+        <div class="goal-item ${goal.completed ? 'completed' : ''}" data-id="${goal.id}">
+            <div class="goal-content">
+                <input type="checkbox" ${goal.completed ? 'checked' : ''} 
+                    onchange="toggleGoalCompletion('${goal.id}')">
+                <span class="goal-title">${goal.title}</span>
+                ${goal.description ? `<p class="goal-description">${goal.description}</p>` : ''}
+                <div class="goal-actions">
+                    <button class="btn-icon" onclick="openGoalModal('${type}', '${goal.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon" onclick="deleteGoal('${goal.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Update progress
+    updateGoalProgress(type, 
+        type === 'weekly' ? weeklyGoalsProgress : monthlyGoalsProgress,
+        type === 'weekly' ? weeklyGoalsCompletedEl : monthlyGoalsCompletedEl,
+        type === 'weekly' ? weeklyGoalsTotalEl : monthlyGoalsTotalEl
+    );
+}
+
+// Update the updateGoalsProgress function to be async
+async function updateGoalsProgress() {
+    const goals = await loadGoals();
+    const currentDate = new Date();
+    const weekKey = `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`;
+    const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Update weekly goals progress
+    const weeklyGoals = (goals.weekly && goals.weekly[weekKey]) || [];
+    const weeklyCompleted = weeklyGoals.filter(g => g.completed).length;
+    const weeklyTotal = weeklyGoals.length;
+    const weeklyProgress = weeklyTotal > 0 ? (weeklyCompleted / weeklyTotal) * 100 : 0;
+    
+    weeklyGoalsProgress.style.width = `${weeklyProgress}%`;
+    weeklyGoalsCompletedEl.textContent = weeklyCompleted;
+    weeklyGoalsTotalEl.textContent = weeklyTotal;
+    
+    // Update monthly goals progress
+    const monthlyGoals = (goals.monthly && goals.monthly[monthKey]) || [];
+    const monthlyCompleted = monthlyGoals.filter(g => g.completed).length;
+    const monthlyTotal = monthlyGoals.length;
+    const monthlyProgress = monthlyTotal > 0 ? (monthlyCompleted / monthlyTotal) * 100 : 0;
+    
+    monthlyGoalsProgress.style.width = `${monthlyProgress}%`;
+    monthlyGoalsCompletedEl.textContent = monthlyCompleted;
+    monthlyGoalsTotalEl.textContent = monthlyTotal;
+}
+
+// Update the openGoalModal function to be async
+async function openGoalModal(type, goalId = null) {
+    const modalTitle = document.querySelector('.modal-header h3');
+    const titleInput = document.getElementById('goal-title');
+    const descriptionInput = document.getElementById('goal-description');
+    const typeInput = document.getElementById('goal-type');
+    const goalIdInput = document.getElementById('goal-id');
+    
+    // Set modal title and type
+    modalTitle.textContent = goalId ? 'Edit Goal' : 'Add Goal';
+    typeInput.value = type;
+    goalIdInput.value = goalId || '';
+    
+    // If editing, load the goal details
+    if (goalId) {
+        const goals = await loadGoals();
+        const currentDate = new Date();
+        const key = type === 'weekly' 
+            ? `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`
+            : `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const goalList = (goals[type] && goals[type][key]) || [];
+        const goal = goalList.find(g => g.id === goalId);
+        
+        if (goal) {
+            titleInput.value = goal.title;
+            descriptionInput.value = goal.description || '';
+        }
+    } else {
+        titleInput.value = '';
+        descriptionInput.value = '';
+    }
+    
+    // Show the modal
+    modal.style.display = 'block';
+}
+
+// Update the DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', async () => {
+    // Existing code...
+    await renderGoals();
+    // Rest of the code...
+});
 
 // Calculate and update progress statistics
 async function updateProgressStats() {
