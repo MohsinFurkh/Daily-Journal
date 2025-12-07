@@ -45,25 +45,37 @@ const monthlyGoalsTotalEl = document.getElementById('monthly-goals-total');
 // Modal Elements
 const modal = document.createElement('div');
 modal.className = 'modal';
+modal.style.display = 'none';
+modal.style.position = 'fixed';
+modal.style.zIndex = '1000';
+modal.style.left = '0';
+modal.style.top = '0';
+modal.style.width = '100%';
+modal.style.height = '100%';
+modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+modal.style.justifyContent = 'center';
+modal.style.alignItems = 'center';
 modal.innerHTML = `
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Add Goal</h3>
-            <button class="modal-close">&times;</button>
+    <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <h3 style="margin: 0;">Add Goal</h3>
+            <button class="modal-close" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="form-group">
-                <label for="goal-title">Goal Title</label>
-                <input type="text" id="goal-title" placeholder="Enter goal title" required>
+            <input type="hidden" id="goal-id">
+            <input type="hidden" id="goal-type">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="goal-title" style="display: block; margin-bottom: 5px; font-weight: bold;">Goal Title</label>
+                <input type="text" id="goal-title" placeholder="Enter goal title" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
-            <div class="form-group">
-                <label for="goal-description">Description (Optional)</label>
-                <textarea id="goal-description" placeholder="Enter goal description"></textarea>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="goal-description" style="display: block; margin-bottom: 5px; font-weight: bold;">Description (Optional)</label>
+                <textarea id="goal-description" placeholder="Enter goal description" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-height: 100px;"></textarea>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancel-goal">Cancel</button>
-            <button class="btn btn-primary" id="save-goal">Save Goal</button>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+            <button class="btn btn-secondary" id="cancel-goal" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+            <button class="btn btn-primary" id="save-goal" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Goal</button>
         </div>
     </div>
 `;
@@ -366,26 +378,41 @@ function getWeekNumber(d) {
 }
 
 // Open goal modal
-function openGoalModal(type, goal = null) {
-    currentGoalType = type;
-    editingGoalId = goal ? goal.id : null;
+function openGoalModal(type, goalId = null) {
+    const modalTitle = document.querySelector('.modal-header h3');
+    const titleInput = document.getElementById('goal-title');
+    const descriptionInput = document.getElementById('goal-description');
+    const typeInput = document.getElementById('goal-type');
+    const goalIdInput = document.getElementById('goal-id');
     
-    const title = document.querySelector('.modal-header h3');
-    const goalTitle = document.getElementById('goal-title');
-    const goalDescription = document.getElementById('goal-description');
+    // Set modal title and type
+    modalTitle.textContent = goalId ? 'Edit Goal' : 'Add Goal';
+    typeInput.value = type;
+    goalIdInput.value = goalId || '';
     
-    title.textContent = editingGoalId ? 'Edit Goal' : 'Add Goal';
-    
-    if (goal) {
-        goalTitle.value = goal.title;
-        goalDescription.value = goal.description || '';
+    // If editing, load the goal details
+    if (goalId) {
+        const goals = JSON.parse(localStorage.getItem('journal_goals') || '{}');
+        const currentDate = new Date();
+        const key = type === 'weekly' 
+            ? `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`
+            : `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        const goalList = (goals[type] && goals[type][key]) || [];
+        const goal = goalList.find(g => g.id === goalId);
+        
+        if (goal) {
+            titleInput.value = goal.title;
+            descriptionInput.value = goal.description || '';
+        }
     } else {
-        goalTitle.value = '';
-        goalDescription.value = '';
+        titleInput.value = '';
+        descriptionInput.value = '';
     }
     
+    // Show the modal
     modal.style.display = 'flex';
-    goalTitle.focus();
+    titleInput.focus();
 }
 
 // Close goal modal
@@ -805,42 +832,6 @@ async function updateGoalsProgress() {
     monthlyGoalsTotalEl.textContent = monthlyTotal;
 }
 
-// Update the openGoalModal function to be async
-async function openGoalModal(type, goalId = null) {
-    const modalTitle = document.querySelector('.modal-header h3');
-    const titleInput = document.getElementById('goal-title');
-    const descriptionInput = document.getElementById('goal-description');
-    const typeInput = document.getElementById('goal-type');
-    const goalIdInput = document.getElementById('goal-id');
-    
-    // Set modal title and type
-    modalTitle.textContent = goalId ? 'Edit Goal' : 'Add Goal';
-    typeInput.value = type;
-    goalIdInput.value = goalId || '';
-    
-    // If editing, load the goal details
-    if (goalId) {
-        const goals = await loadGoals();
-        const currentDate = new Date();
-        const key = type === 'weekly' 
-            ? `${currentDate.getFullYear()}-W${getWeekNumber(currentDate)}`
-            : `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        const goalList = (goals[type] && goals[type][key]) || [];
-        const goal = goalList.find(g => g.id === goalId);
-        
-        if (goal) {
-            titleInput.value = goal.title;
-            descriptionInput.value = goal.description || '';
-        }
-    } else {
-        titleInput.value = '';
-        descriptionInput.value = '';
-    }
-    
-    // Show the modal
-    modal.style.display = 'block';
-}
 
 // Update the DOMContentLoaded event listener
 document.addEventListener('DOMContentLoaded', async () => {
