@@ -6,22 +6,35 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data', 'journal_entries.json');
 
-// Create data directory if it doesn't exist
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir);
+// For Vercel, we'll use /tmp directory for file storage
+const DATA_FILE = process.env.VERCEL 
+    ? '/tmp/journal_entries.json' 
+    : path.join(__dirname, 'data', 'journal_entries.json');
+
+// Create data directory if it doesn't exist (for local development)
+if (!process.env.VERCEL) {
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
 }
 
 // Initialize data file if it doesn't exist
 if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({}));
+    fs.writeFileSync(DATA_FILE, JSON.stringify({}), 'utf8');
 }
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public'));
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve the main page for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Get all entries
 app.get('/api/entries', (req, res) => {
