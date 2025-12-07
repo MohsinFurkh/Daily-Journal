@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Journal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-book-open"></i> Daily Journal</h1>
+            <div class="date-picker">
+                <input type="date" id="journal-date" onchange="loadEntry()">
+                <button onclick="saveEntry()" class="btn save-btn">Save</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="journal-container">
+                <section class="journal-section">
+                    <h2>1. Daily Log</h2>
+                    <textarea id="daily-log" placeholder="What happened today?"></textarea>
+                </section>
+
+                <section class="journal-section">
+                    <h2>2. Habit Tracking</h2>
+                    <div class="habits-grid">
+                        <div class="form-group">
+                            <label for="sleep">Sleep (hours):</label>
+                            <input type="number" id="sleep" min="0" max="24" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="water">Water (glasses):</label>
+                            <input type="number" id="water" min="0" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="steps">Steps/Walk:</label>
+                            <input type="number" id="steps" min="0">
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>Reading:</label>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="reading-yes">
+                                <label for="reading-yes">Yes</label>
+                                <input type="checkbox" id="reading-no">
+                                <label for="reading-no">No</label>
+                            </div>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>Exercise:</label>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="exercise-yes">
+                                <label for="exercise-yes">Yes</label>
+                                <input type="checkbox" id="exercise-no">
+                                <label for="exercise-no">No</label>
+                            </div>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>No unnecessary spending:</label>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="spending-yes">
+                                <label for="spending-yes">Yes</label>
+                                <input type="checkbox" id="spending-no">
+                                <label for="spending-no">No</label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="journal-section">
+                    <h2>3. Gratitude – 3 Things I'm Thankful For</h2>
+                    <div class="gratitude-list">
+                        <input type="text" id="gratitude1" placeholder="I'm thankful for...">
+                        <input type="text" id="gratitude2" placeholder="I'm thankful for...">
+                        <input type="text" id="gratitude3" placeholder="I'm thankful for...">
+                    </div>
+                </section>
+
+                <section class="journal-section">
+                    <h2>4. Professional Reflection</h2>
+                    <p class="section-subtitle">(Teaching / Research / Work improvements)</p>
+                    <textarea id="professional" placeholder="Reflect on your professional day..."></textarea>
+                </section>
+
+                <section class="journal-section">
+                    <h2>5. Personal Thoughts</h2>
+                    <p class="section-subtitle">(How you felt, anything on your mind)</p>
+                    <textarea id="personal" placeholder="Share your personal thoughts..."></textarea>
+                </section>
+
+                <section class="journal-section">
+                    <h2>6. Priorities for Tomorrow (Top 3)</h2>
+                    <div class="priorities-list">
+                        <input type="text" id="priority1" placeholder="Priority 1">
+                        <input type="text" id="priority2" placeholder="Priority 2">
+                        <input type="text" id="priority3" placeholder="Priority 3">
+                    </div>
+                </section>
+
+                <section class="journal-section">
+                    <h2>7. Finance Note (Optional – daily)</h2>
+                    <div class="form-group">
+                        <label for="expenses">Today's expenses:</label>
+                        <input type="text" id="expenses" placeholder="E.g., Coffee: $3.50, Lunch: $12.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="savings">Savings/Investments note:</label>
+                        <input type="text" id="savings" placeholder="E.g., Saved $20, Invested $100 in...">
+                    </div>
+                </section>
+
+                <div class="action-buttons">
+                    <button onclick="saveEntry()" class="btn save-btn">Save Entry</button>
+                    <button onclick="clearForm()" class="btn clear-btn">Clear Form</button>
+                </div>
+            </div>
+
+            <div class="entries-sidebar">
+                <div class="progress-container">
+                    <h3>Journaling Progress</h3>
+                    <div class="streak-counter">
+                        <i class="fas fa-fire"></i>
+                        <span id="current-streak">0</span> day streak
+                    </div>
+                    <div class="completion-stats">
+                        <div class="stat">
+                            <span id="days-this-month">0</span>
+                            <small>days this month</small>
+                        </div>
+                        <div class="stat">
+                            <span id="completion-rate">0%</span>
+                            <small>completion</small>
+                        </div>
+                    </div>
+                    <div class="month-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="month-progress-bar"></div>
+                        </div>
+                        <div class="progress-label">
+                            <span id="days-completed">0</span> of <span id="total-days">30</span> days
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Goals Section -->
+                <div class="goals-container" id="weekly-goals-container">
+                    <div class="goals-header">
+                        <h3>This Week's Goals</h3>
+                        <button class="btn-icon" id="add-weekly-goal">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="goals-list" id="weekly-goals-list">
+                        <!-- Weekly goals will be added here dynamically -->
+                        <div class="no-goals">No goals set for this week</div>
+                    </div>
+                    <div class="goals-progress">
+                        <div class="progress-bar small">
+                            <div class="progress-fill" id="weekly-goals-progress"></div>
+                        </div>
+                        <span id="weekly-goals-completed">0</span>/<span id="weekly-goals-total">0</span>
+                    </div>
+                </div>
+
+                <!-- Monthly Goals Section -->
+                <div class="goals-container" id="monthly-goals-container">
+                    <div class="goals-header">
+                        <h3>This Month's Goals</h3>
+                        <button class="btn-icon" id="add-monthly-goal">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="goals-list" id="monthly-goals-list">
+                        <!-- Monthly goals will be added here dynamically -->
+                        <div class="no-goals">No goals set for this month</div>
+                    </div>
+                    <div class="goals-progress">
+                        <div class="progress-bar small">
+                            <div class="progress-fill" id="monthly-goals-progress"></div>
+                        </div>
+                        <span id="monthly-goals-completed">0</span>/<span id="monthly-goals-total">0</span>
+                    </div>
+                </div>
+                <h3>Previous Entries</h3>
+                <div id="entry-dates" class="entry-dates">
+                    <!-- Entry dates will be populated here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "2025-12-07": {
+    "dailyLog": "The journey of thousand miles begins with a single step. Today I take my first step.\nToday I begin this journal. I want to bring clarity, discipline, and peace into my life. I hope this diary becomes a space where I can think freely, reflect honesty, and grow everyday.",
+    "habits": {
+      "sleep": null,
+      "water": null,
+      "steps": 5060,
+      "reading": false,
+      "exercise": false,
+      "noSpending": false
+    },
+    "gratitude": [
+      "The health",
+      "my family",
+      "and my journey"
+    ],
+    "professional": "Today I created this webpage/application where I can share my things",
+    "personal": "I felt good after taking an evening walk after 3 weeks since my back spasm",
+    "priorities": [
+      "CCR Submission",
+      "Paper submission",
+      "Database Lecture upload"
+    ],
+    "finance": {
+      "expenses": "900 for amazon shopping",
+      "savings": ""
+    }
+  }
+}
